@@ -2,12 +2,11 @@ import RPi.GPIO as GPIO
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import time
+import datetime
 
-# Konfiguracja GPIO
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-# Konfiguracja Spotify
 SPOTIPY_CLIENT_ID = ''
 SPOTIPY_CLIENT_SECRET = ''
 SPOTIPY_REDIRECT_URI = ''
@@ -19,13 +18,16 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID,
                                                scope=scope,
                                                open_browser=False))
 
+def current_time():
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 def is_music_playing(retry=3, delay=1):
     while retry > 0:
         try:
             playback_state = sp.current_playback()
             return playback_state is not None and playback_state['is_playing']
-        except (spotipy.exceptions.SpotifyException, requests.exceptions.ReadTimeout) as e:
-            print(f"Bladd podczas sprawdzania stanu odtwarzania: {e}")
+        except (spotipy.exceptions.SpotifyException) as e:
+            print(f"{current_time()} - Blad podczas sprawdzania stanu odtwarzania: {e}")
             time.sleep(delay)
             retry -= 1
     return False
@@ -34,19 +36,18 @@ def pause_spotify():
     if is_music_playing():
         try:
             sp.pause_playback()
-            print("Muzyka zostala zapauzowana.")
+            print(f"{current_time()} - Muzyka została zapauzowana.")
         except Exception as e:
-            print("Blad podczas pauzowania Spotify:", e)
+            print(f"{current_time()} - Blad podczas pauzowania Spotify:", e)
 
 def resume_spotify():
     if not is_music_playing():
         try:
             sp.start_playback()
-            print("Muzyka zostala wznowiona.")
+            print(f"{current_time()} - Muzyka zostala wznowiona.")
         except Exception as e:
-            print("Blad podczas wznawiania Spotify:", e)
+            print(f"{current_time()} - Blad podczas wznawiania Spotify:", e)
 
-# Stan drzwi
 door_state = None
 
 try:
@@ -54,12 +55,12 @@ try:
         current_state = GPIO.input(17)
         if current_state != door_state:
             if current_state == True:
-                print("Drzwi zostaly otwarte.")
+                print(f"{current_time()} - Drzwi zostaly otwarte.")
                 pause_spotify()
             else:
-                print("Drzwi zostaly zamkniete.")
+                print(f"{current_time()} - Drzwi zostaly zamkniete.")
                 resume_spotify()
             door_state = current_state
-        time.sleep(0.1)
+        time.sleep(1)
 except KeyboardInterrupt:
     GPIO.cleanup()
