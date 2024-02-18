@@ -19,13 +19,16 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID,
                                                scope=scope,
                                                open_browser=False))
 
-def is_music_playing():
-    try:
-        playback_state = sp.current_playback()
-        return playback_state is not None and playback_state['is_playing']
-    except Exception as e:
-        print("Blad podczas sprawdzania stanu odtwarzania:", e)
-        return False
+def is_music_playing(retry=3, delay=1):
+    while retry > 0:
+        try:
+            playback_state = sp.current_playback()
+            return playback_state is not None and playback_state['is_playing']
+        except (spotipy.exceptions.SpotifyException, requests.exceptions.ReadTimeout) as e:
+            print(f"Bladd podczas sprawdzania stanu odtwarzania: {e}")
+            time.sleep(delay)
+            retry -= 1
+    return False
 
 def pause_spotify():
     if is_music_playing():
